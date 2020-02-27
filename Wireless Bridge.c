@@ -13,14 +13,13 @@ Company : MIH Electro
 Comments: 
 Nrf24L01
 Atmega8
-7.3728MHz
+16.0MHz
 PD2 - Irq
 PC0 - CSN
 PC1 - CE
 PB3 - Mosi
 PB4 - Miso
 PB5 - SCK 
-
 
 Chip type               : ATmega8A
 Program type            : Application
@@ -39,60 +38,92 @@ Data Stack size         : 256
 #include <string.h>
 #include "CRC.C"
 #include "WB_Protocol.c"
+#include "Config.h"
 // Declare your global variables here
-#define TestBoardRemap
 
 #ifdef TestBoardRemap
-#define UART_U2X 1
-#define UART_UBRRL 16
+    #define UART_U2X 1
+    #define UART_UBRRL 3    // 16 - 115200 bps | 1 - 1Mbps | 3 - 0.5Mbps
+    #define LED5 PORTC.5
+    #define LED4 PORTC.4
+    #define LED3 PORTC.5
+    #define LED2 PORTC.2
+    #define LED1 PORTC.1
+    #define LED0 PORTC.0
 #else
-#define UART_U2X 0
-#define UART_UBRRL 3
+    #define UART_U2X 0
+    #define UART_UBRRL 3
 #endif
 
-unsigned char data[40];
-unsigned char out[40];
 
-
-volatile bool HackMode=false;
-volatile bool SafeMode=false;
-volatile bool WaitData=false;
-volatile bool FullPack=false;
-volatile bool ID_wait=false;
-volatile bool RR_WaitData;
-volatile bool WR_WaitData;
-
+volatile bool HackMode          =   false;
+volatile bool SafeMode          =   false;
+volatile bool WaitData          =   false;
+volatile bool FullPack          =   false;
+volatile bool ID_wait           =   false;
+volatile bool RR_WaitData       =   false;
+volatile bool WR_WaitData       =   false;
+volatile bool ReturnToReadUart  =   false; 
+volatile bool Tx_Completed      =   false;
+volatile bool Tx_Failed         =   false;
 extern volatile bool Tx_Run;
+extern volatile bool NRF_IRQ_State;
 
-#define CharWaitDelay 200        // *100us     200*100us=20ms
+char data[33];
+char out[65];
+char ID[5];
+char pos;
+char data_count = 0;
 
-#define CRCEN
-
-unsigned char ID[5];
-unsigned char pos;
-
-unsigned char data_count=0;
-
-bool ReturnToReadUart=false;
+void NRF_CheckTx(bool RxNeed);
 
 // External Interrupt 0 service routine
 interrupt [EXT_INT0] void ext_int0_isr(void)
 {    
-unsigned char length,a,stat;
-
-stat=read_irq();
-   if(stat & 0x40)
-   { 
-     read_rx(out,&length); 
-     for(a=0;a<length;a++)putchar(out[a]);  
-     if(HackModeState)putchar('>');
-   }
-   else if(stat & 0x20){ Tx_Run=false; clr_irq(); rx_mode(); }
-   else if(stat & 0x10){ Tx_Run=false; clr_irq(); rx_mode(); puts(error); }  
-   else clr_irq();
-
+    char length,a,stat; 
+    puts("<i");
+    if(!NRF_IRQ_State) {    
+        
+        puts(" d>");
+        return;    
+    }
+    stat=read_irq();      
+    if(stat & 0x40){ 
+        read_rx(out,&length); 
+        for(a=0;a<length;a++)putchar(out[a]);   
+         /*if(strcmp(out,">C-NODE-10\r\n") == 0){ 
+          LED5 = 1;
+          LED4 = 1;
+          LED3 = 1;
+          LED2 = 1;
+          LED1 = 1;
+          LED0 = 1;
+          delay_ms(100);
+          LED5 = 0;     
+          LED4 = 0;
+          LED3 = 0;
+          LED2 = 0;
+          LED1 = 0;
+          LED0 = 0;
+         }  */
+        if(HackModeState) putchar('>');
+    }
+    else if(stat & 0x20){ puts(" + "); Tx_Completed = true; }
+    else if(stat & 0x10){ puts(" - "); Tx_Failed = true; } 
+    clr_irq();                                
+    Tx_Run = false; 
+    puts(" e>");
 }
 
+void NRF_CheckTx(bool RxNeed){
+
+    if(!(Tx_Completed || Tx_Failed)) return;
+    if(Tx_Failed) puts(tx_error);
+    Tx_Completed = false; 
+    Tx_Failed = false;
+    if(RxNeed) rx_mode();
+    Tx_Run = false;
+}
 #define DATA_REGISTER_EMPTY (1<<UDRE)
 #define RX_COMPLETE (1<<RXC)
 #define FRAMING_ERROR (1<<FE)
@@ -100,17 +131,17 @@ stat=read_irq();
 #define DATA_OVERRUN (1<<DOR)
 
 // USART Receiver buffer
-#define RX_BUFFER_SIZE 45
+
 char rx_buffer[RX_BUFFER_SIZE];
 
 #if RX_BUFFER_SIZE <= 256
-unsigned char rx_wr_index=0,rx_rd_index=0;
+char rx_wr_index = 0,rx_rd_index = 0;
 #else
-unsigned int rx_wr_index=0,rx_rd_index=0;
+unsigned int rx_wr_index = 0,rx_rd_index = 0;
 #endif
 
 #if RX_BUFFER_SIZE < 256
-volatile unsigned char rx_counter=0;
+volatile unsigned char rx_counter = 0;
 #else
 unsigned int rx_counter=0;
 #endif
@@ -121,25 +152,25 @@ bit rx_buffer_overflow;
 // USART Receiver interrupt service routine
 interrupt [USART_RXC] void usart_rx_isr(void)
 {
-char status,data;
-status=UCSRA;
-data=UDR;
-if ((status & (FRAMING_ERROR | PARITY_ERROR | DATA_OVERRUN))==0)
-   {
-   rx_buffer[rx_wr_index++]=data;
-#if RX_BUFFER_SIZE == 256
+    char status  =   UCSRA;
+    char data    =   UDR; 
+    
+    if ((status & (FRAMING_ERROR | PARITY_ERROR | DATA_OVERRUN))==0){
+        
+        rx_buffer[rx_wr_index++]=data;
+    #if RX_BUFFER_SIZE == 256
    // special case for receiver buffer size=256
-   if (++rx_counter == 0) rx_buffer_overflow=1;
-#else
-   if (rx_wr_index == RX_BUFFER_SIZE) rx_wr_index=0;
-   if (++rx_counter == RX_BUFFER_SIZE)
-      {
-      rx_counter=0;
-      rx_buffer_overflow=1;
-      }
-#endif
+        if (++rx_counter == 0) rx_buffer_overflow=1;
+    #else
+        if (rx_wr_index == RX_BUFFER_SIZE) rx_wr_index=0;
+        if (++rx_counter == RX_BUFFER_SIZE)
+        {
+            rx_counter=0;
+            rx_buffer_overflow=1;
+        }
+    #endif
    }  
-   else puts(error);
+   else puts(uart_error);
 }
 
 #ifndef _DEBUG_TERMINAL_IO_
@@ -148,16 +179,16 @@ if ((status & (FRAMING_ERROR | PARITY_ERROR | DATA_OVERRUN))==0)
 #pragma used+
 char getchar(void)
 {
-char data;
-while (rx_counter==0);
-data=rx_buffer[rx_rd_index++];
-#if RX_BUFFER_SIZE != 256
-if (rx_rd_index == RX_BUFFER_SIZE) rx_rd_index=0;
-#endif
-#asm("cli")
---rx_counter;
-#asm("sei")
-return data;
+    char data;
+    while(rx_counter == 0);
+    data = rx_buffer[rx_rd_index++];
+    #if RX_BUFFER_SIZE != 256
+    if (rx_rd_index == RX_BUFFER_SIZE) rx_rd_index = 0;
+    #endif
+    #asm("cli")
+    --rx_counter;
+    #asm("sei")
+    return data;
 }
 #pragma used-
 #endif
@@ -167,11 +198,11 @@ return data;
 void main(void)
 {
 // Declare your local variables here
-   unsigned char length=0;    
-   char wd;
-   bool time_out=false;    
-   unsigned char INum=-1;  
-   unsigned short int CRC;
+    char length     = 0;    
+    char wd;
+    bool time_out   = false;    
+    char INum       = 255;  
+    unsigned short int CRC;
 // Input/Output Ports initialization
 // Port B initialization
 // Function: Bit7=In Bit6=In Bit5=Out Bit4=In Bit3=Out Bit2=Out Bit1=In Bit0=In 
@@ -181,7 +212,7 @@ PORTB=(0<<PORTB7) | (0<<PORTB6) | (0<<PORTB5) | (1<<PORTB4) | (0<<PORTB3) | (0<<
 
 // Port C initialization
 // Function: Bit6=In Bit5=In Bit4=In Bit3=In Bit2=In Bit1=Out Bit0=Out 
-DDRC=(0<<DDC6) | (0<<DDC5) | (0<<DDC4) | (0<<DDC3) | (0<<DDC2) | (1<<DDC1) | (1<<DDC0);
+DDRC=(1<<DDC6) | (1<<DDC5) | (1<<DDC4) | (1<<DDC3) | (1<<DDC2) | (1<<DDC1) | (1<<DDC0);
 // State: Bit6=T Bit5=T Bit4=T Bit3=T Bit2=T Bit1=0 Bit0=0 
 PORTC=(0<<PORTC6) | (0<<PORTC5) | (0<<PORTC4) | (0<<PORTC3) | (0<<PORTC2) | (0<<PORTC1) | (0<<PORTC0);
 
@@ -285,14 +316,14 @@ delay_ms(1000);
 
 NRF24L01_init();
 rx_mode();
-delay_ms(50);     //!!!
+delay_ms(50); 
 csn=0;            //
 spi(0xE2);        //
 csn=1;            //
 csn=0;            //
 spi(0xE1);        //
-csn=1;            ///
-clr_irq();
+csn=1; 
+clr_irq();   
 
 #ifdef TestBoardRemap
 printf("NRF24L01+ demo board adapter\r\nBaudrate: 115200\r\n");
@@ -300,111 +331,98 @@ printf("NRF24L01+ demo board adapter\r\nBaudrate: 115200\r\n");
 printf("NRF24L01+ adapter\r\nBaudrate: 115200\r\n");
 #endif
 #asm("sei")
-while (1)
-      {      
-      time_out=false;
-      while(rx_counter==0); 
-      for(length=0;length<32;)
-           {             
-           if(SafeMode)
-            {  
-             data[length++]=getchar();   
-             if(!WaitData)
-             {
-             if(data[0]!='$')length--; 
-             else
-               { 
-                data[length]='\0';  
-                INum=FindInstruction(data,length);
-                if(INum!=255)
-                {          
-                 IProcc(INum,data);
-                 length=0;
-                }
-               }
-             } 
-             else 
-             {  
-              
-                if(data_count==0){ data_count=data[0];}
-                else 
-                {
-                  if(length==(data_count+1))
-                  { 
-                   data_count=0;
-                   WaitData=false; 
-                   #ifdef CRCEN
-                    CRC=CRC16(data,length-2);
-                    if((data[length-2]!=(unsigned char)CRC)||(data[length-1]!=(unsigned char)(CRC>>8)))
-                    {
-                      ReturnToReadUart=true;
-                      puts(crc_error_message);  
-                    }
-                   #endif
-                   if(RR_WaitData){ IProcc(5,data);  ReturnToReadUart=true;}
-                   if(WR_WaitData){ IProcc(6,data);  ReturnToReadUart=true;} 
-                   break;    
+    while (1){      
+        time_out = false;
+        while(rx_counter == 0) NRF_CheckTx(true); 
+        for(length = 0; length < 32;){             
+            if(SafeMode){  
+                data[length++] = getchar();   
+                 if(!WaitData){
+                    if(data[0] != '$')length--; 
+                    else{ 
+                        data[length]='\0';  
+                        INum=FindInstruction(data,length);
+                        if(INum != 255){          
+                            IProcc(INum, data);
+                            length=0;
+                        }
+                     }
+                 } 
+             else{                    
+                if(data_count==0) data_count = data[0];
+                else{
+                    if(length==(data_count+1)){ 
+                        data_count  = 0;
+                        WaitData    = false; 
+                        #ifdef CRCEN
+                        CRC = CRC16(data,length-2);
+                        if((data[length-2] != (char)CRC) || (data[length-1] != (char)(CRC>>8))){
+                            ReturnToReadUart=true;
+                            puts(crc_error_message);  
+                        }
+                        #endif
+                    if(RR_WaitData){ IProcc(5, data);  ReturnToReadUart = true;}
+                    if(WR_WaitData){ IProcc(6, data);  ReturnToReadUart = true;} 
+                    break;    
                   }
                 }
-                
+                        
              }
-              while(rx_counter==0);
+                while(rx_counter == 0);
             }
-            else 
-            {
-            if(!FullPack)
-            {
-              wd=CharWaitDelay;
-              while(rx_counter==0)
-              {
-               delay_us(100);
-               if(--wd==0) {time_out=true;break;}
-              }          
-             if(!time_out)data[length++]=getchar(); 
-             else break;  
-            }   
-            else 
-            {
-             data[length++]=getchar();   
-             
-            }
-
-            }
-           }       
-           if(ReturnToReadUart){ReturnToReadUart=false;continue;}
-           data[length]='\0';    
-           if(ID_wait)
-           {      
-           ID[0]=data[1];
-           ID[1]=data[2];
-           ID[2]=data[3];
-           ID[3]=data[4];
-           ID[4]=data[5];
-           SetID(ID);
-           ID_wait=false;
-           printf("%s",true_message); 
-          /* putchar(ID[0]);  
-           putchar(ID[1]);
-           putchar(ID[2]);
-           putchar(ID[3]);
-           putchar(ID[4]);  */
-           continue;
-           } 
+            else {
+                if(!FullPack){
+                    wd = CharWaitDelay;
+                    while(rx_counter==0){
+                        delay_us(100);
+                        if(--wd==0){
+                            time_out = true;
+                            break;
+                        }
+                    }          
+                    if(!time_out) 
+                        data[length++] = getchar(); 
+                    else break;  
+                }   
+                else {
+                    data[length++]=getchar();   
+                }
+            } 
+            NRF_CheckTx(false);
+        }       
+        if(ReturnToReadUart){
+            ReturnToReadUart = false;
+            continue;
+        }  
+       
+        data[length] = '\0'; 
           
-           if(!SafeMode)
-           {   
-           INum=FindInstruction(data,length);
-           if(INum!=255)
-            { 
-             IProcc(INum,data);
-             continue;  
+        if(ID_wait){      
+            ID[0]=data[1];
+            ID[1]=data[2];
+            ID[2]=data[3];
+            ID[3]=data[4];
+            ID[4]=data[5];
+            SetID(ID);
+            ID_wait = false;
+            printf("%s",true_message); 
+            continue;
+        } 
+              
+        if(!SafeMode){   
+            INum = FindInstruction(data,length);
+            if(INum != 255){ 
+                IProcc(INum,data);
+                continue;  
             }
-           }   
+        }   
           
-          // delay_ms(1);// putchar('>');
-           while(Tx_Run);
-           send_data(data,length); 
-          // delay_ms(1);//putchar('<');
+          // delay_ms(1); 
+        putchar('>');
+        while(Tx_Run) NRF_CheckTx(false);
+        printf("TX[%u]",length);
+        send_data(data,length); 
+        putchar('<');
                
       }      
 }

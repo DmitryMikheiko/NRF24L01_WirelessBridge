@@ -1,6 +1,5 @@
 #include <stdbool.h> 
-
-#define TestBoardRemap
+#include "Config.h"
 
 #ifdef TestBoardRemap
 #define ce  PORTB.2             //PORTB.2 - Atmega8 test board
@@ -18,7 +17,9 @@
 #define FLUSH_RX = 0XE2;        //clear RX FIFO regsiters  This command should not be used when the transfer acknowledge signal
 #define RESUSE_TX_PL = 0XE3;        //Re-use on a packet of valid data when CE is high, the data packets continually re-launch
 #define NOP = 0XFF ;        //Empty command is used to retrieve data
+
 const unsigned char R_RX_PL_WID = 0x60; 
+
 unsigned char read_irq();
 void clr_irq();
 void read_rx(unsigned char *data,unsigned char *length);
@@ -27,26 +28,37 @@ void rx_mode(void);
 void send_data(unsigned char *data,unsigned char N);
 void SetID(unsigned char *data);
 void NRF24L01_hack_mode(bool state);
+
 bool HackModeState=false;
-volatile bool Tx_Run=false;
+volatile bool Tx_Run = false;
 bool TxMode=false;
 bool RxMode=false;
+volatile bool NRF_IRQ_State = true;
 
-unsigned char read_fifo_status()
-{unsigned char stat;
- bit I=SREG.7; 
- #asm("cli")
+void NRF_IRQ_Disable(void){
+ NRF_IRQ_State = false;
+}
+void NRF_IRQ_Enable(void){
+ NRF_IRQ_State = true;
+}
+
+unsigned char read_fifo_status(){
+ unsigned char stat;
+ //bit I=SREG.7; 
+ //#asm("cli")
+
  csn=0;
  spi(0x17);
  stat=spi(0xFF);
  csn=1;      
- SREG.7=I;
+ //SREG.7=I;   
+
  return stat;
 }
-void  tx_mode(void)
+void tx_mode(void)
 {
- bit I=SREG.7; 
- #asm("cli") 
+ //bit I=SREG.7; 
+ //#asm("cli") 
  ce=0;
  csn=0;
  spi(0x20);
@@ -56,12 +68,14 @@ void  tx_mode(void)
  TxMode=true;
  RxMode=false;
  delay_ms(2);   
- SREG.7=I;
+ //SREG.7=I;
+ 
 }
 void rx_mode(void)
 {
  bit I=SREG.7; 
- #asm("cli")  
+ #asm("cli")
+ //NRF_IRQ_Disable();  
  ce=1;
  csn=0;
  spi(0x20);
@@ -70,14 +84,16 @@ void rx_mode(void)
  RxMode=true;
  TxMode=false;
  delay_ms(2);
+ //NRF_IRQ_Enable();
  SREG.7=I; 
 }
 void send_data(unsigned char *data,unsigned char N)
 { unsigned char a;
- bit I=SREG.7; 
- #asm("cli")    
+ //bit I=SREG.7; 
+ //#asm("cli")
+ NRF_IRQ_Disable();    
  if(!TxMode) tx_mode();  
-  while(read_irq() & 0x1); 
+ while(read_irq() & 0x1); 
  csn=0;
  spi(0xE1);
  csn=1;
@@ -86,42 +102,46 @@ void send_data(unsigned char *data,unsigned char N)
  spi(0xA0);
  for (a=0;a<N;a++){spi(data[a]); }
  csn=1;  
- clr_irq();               
- Tx_Run=true; 
- SREG.7=I;    
+ //clr_irq();               
+ Tx_Run = true; 
+ NRF_IRQ_Enable();
+ //SREG.7=I;    
 }
-void read_rx(unsigned char *data,unsigned char *length)
-{unsigned char a,pos=0;
- 
- bit I=SREG.7; 
- #asm("cli")    
- while(!(read_fifo_status()&1))
- {
- csn=0;
- spi(R_RX_PL_WID);
- *length=spi(0xFF);
- csn=1;   
- csn=0;
- spi(0x61);
- for (a=0;a<(*length);a++) data[pos++]=spi(0xFF);
- csn=1;
- csn=0;
- spi(0xE2);
- csn=1; 
- data[pos]='\0';
- clr_irq();  
- }
- SREG.7=I; 
+void read_rx(unsigned char *data, unsigned char *length)
+{
+     char a, pos = 0, p_length, n = 0;
+    *length = 0;
+// bit I=SREG.7; 
+// #asm("cli")    
+    while(!(read_fifo_status() & 1) && n != 2) {
+        n++;
+        csn=0; 
+        spi(R_RX_PL_WID);
+        p_length = spi(0xFF);
+        *length += p_length;
+        //csn=1;   
+        //csn=0;
+        spi(0x61);
+        for (a = 0; a < p_length; a++) data[pos++] = spi(0xFF);
+        //csn=1;
+        //csn=0;
+        //spi(0xE2);
+        csn=1; 
+        data[pos]='\0';
+        //clr_irq();  
+    } 
+    //clr_irq();      
+// SREG.7=I; 
 }
 unsigned char read_irq()
 {unsigned char stat;
- bit I=SREG.7; 
- #asm("cli")
+ //bit I=SREG.7; 
+ //#asm("cli")
  csn=0;
  spi(0x07);
  stat=spi(0xFF);
  csn=1;      
- SREG.7=I;
+ //SREG.7=I;
  return stat;
 }
 void SetID(unsigned char *data)
@@ -140,15 +160,20 @@ void SetID(unsigned char *data)
  SREG.7=I;
 }
 void clr_irq()
-{ unsigned char stat;
- bit I=SREG.7; 
- #asm("cli")
- stat=read_irq();
- csn=0;
- spi(0x27);
- spi(stat); 
- csn=1;    
- SREG.7=I;
+{  
+    char stat;
+ //bit I=SREG.7; 
+ //#asm("cli")
+ //stat=read_irq();
+    csn=0;
+    spi(0x07);
+    stat=spi(0xFF);
+    csn=1;
+    csn=0;
+    spi(0x27);
+    spi(stat); 
+    csn=1;    
+ //SREG.7=I;
 }                              
 void NRF24L01_init(void)
 {
@@ -183,6 +208,7 @@ csn=0;
 spi(0x24);
 spi(0x13);   //Setup_Retr   500us 3-Re-Transmit
 csn=1;
+
 delay_ms(1);
 clr_irq();
 SREG.7=I;
@@ -204,7 +230,7 @@ unsigned char NRF24L01_ReadRigester(unsigned char addr)
 unsigned char value;
 bit I=SREG.7; 
 #asm("cli")
-csn=0;
+ csn=0;
  spi(addr);
  value=spi(0xFF);
  csn=1;
