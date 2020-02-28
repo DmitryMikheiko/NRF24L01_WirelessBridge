@@ -1,0 +1,12 @@
+Linker/
+List/
+Obj/
+Exe/
+*.hci
+*.h~
+*.cci
+*.cof
+*.prj~
+*.c~
+*.cbi
+*.fct
