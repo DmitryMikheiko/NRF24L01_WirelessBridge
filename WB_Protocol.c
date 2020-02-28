@@ -17,9 +17,9 @@ unsigned char FindInstruction(unsigned char *data,unsigned char length)
  if(SafeMode)
  { for(n=0;n<ICount;n++)
   { 
-   if(length==strlen(INames[n]))
+   if(length==strlenf(INames[n]))
    {      
-    if((strcmp(data,INames[n]))==0) return n; 
+    if((strcmpf(data,INames[n]))==0) return n; 
    }    
   }                
  } 
@@ -30,14 +30,14 @@ unsigned char FindInstruction(unsigned char *data,unsigned char length)
      for(n=0;n<ICount;n++)  
      {
      command_find=true;
-     for(pos=0;(pos<strlen(INames[n])) && (pos<length) ;pos++)
+     for(pos=0;(pos<strlenf(INames[n])) && (pos<length) ;pos++)
       {
       if(INames[n][pos]!=data[pos])
        {
         command_find=false; break;
        }  
       }
-      if(command_find && (pos==strlen(INames[n])))return n;
+      if(command_find && (pos==strlenf(INames[n])))return n;
      }
      
    }
@@ -52,14 +52,14 @@ switch (num)
      if(SafeMode){ WaitData=true;ID_wait=true;  }
      else  
      { 
-      pos=strlen(INames[0]);
+      pos=strlenf(INames[0]);
       ID[0]=data[pos++];
       ID[1]=data[pos++];
       ID[2]=data[pos++];
       ID[3]=data[pos++];
       ID[4]=data[pos];  
       SetID(ID);
-      printf("%s",true_message);
+      printf("%p",true_message);
      }
   break;
   
@@ -68,13 +68,13 @@ switch (num)
        {
         HackMode=false; 
         NRF24L01_hack_mode(HackMode);
-        printf("%s",false_message);
+        printf("%p",false_message);
        }  
        else 
        {
         HackMode=true;    
         NRF24L01_hack_mode(HackMode);
-        printf("%s",true_message);
+        printf("%p",true_message);
        }
   break;   
     
@@ -83,16 +83,16 @@ switch (num)
        {
         if(SafeMode)
         { 
-         SafeMode=false;printf("%s",false_message);
+         SafeMode=false;printf("%p",false_message);
         }   
         else 
         {           
-         SafeMode=true; printf("%s",true_message);
+         SafeMode=true; printf("%p",true_message);
         } 
        } 
        else
        {
-        printf("%s",false_message); 
+        printf("%p",false_message); 
        }
   break;
     
@@ -102,17 +102,17 @@ switch (num)
         if(FullPack)
         {
          FullPack=false;
-         printf("%s",false_message);
+         printf("%p",false_message);
         }
         else 
         {
          FullPack=true;
-         printf("%s",true_message);          
+         printf("%p",true_message);          
         }
        }
        else 
        {
-          printf("%s",false_message);
+          printf("%p",false_message);
        }
   break;
     
@@ -140,7 +140,7 @@ switch (num)
      }                
      else 
      {
-      value=NRF24L01_ReadRigester(data[strlen(INames[5])]);
+      value=NRF24L01_ReadRigester(data[strlenf(INames[5])]);
       putchar(value);
      }   
   break;     
@@ -157,19 +157,19 @@ switch (num)
       {
         WR_WaitData=false;  
         NRF24L01_WriteRigester(data[1],data[2]); 
-        printf("%s",true_message);
+        printf("%p",true_message);
       }
      }                
      else 
      {
-       NRF24L01_WriteRigester(data[strlen(INames[5])],data[strlen(INames[5])+1]); 
-       printf("%s",true_message);
+       NRF24L01_WriteRigester(data[strlenf(INames[5])],data[strlenf(INames[5])+1]); 
+       printf("%p",true_message);
      }  
   break;
   
   case 7:                     
     NRF24L01_init(); 
-    printf("%s",true_message);
+    printf("%p",true_message);
     
   break;
   

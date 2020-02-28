@@ -41,20 +41,6 @@ Data Stack size         : 256
 #include "Config.h"
 // Declare your global variables here
 
-#ifdef TestBoardRemap
-    #define UART_U2X 1
-    #define UART_UBRRL 3    // 16 - 115200 bps | 1 - 1Mbps | 3 - 0.5Mbps
-    #define LED5 PORTC.5
-    #define LED4 PORTC.4
-    #define LED3 PORTC.5
-    #define LED2 PORTC.2
-    #define LED1 PORTC.1
-    #define LED0 PORTC.0
-#else
-    #define UART_U2X 0
-    #define UART_UBRRL 3
-#endif
-
 
 volatile bool HackMode          =   false;
 volatile bool SafeMode          =   false;
@@ -70,7 +56,7 @@ extern volatile bool Tx_Run;
 extern volatile bool NRF_IRQ_State;
 
 char data[33];
-char out[65];
+char out[NRF_RX_BUFFER];
 char ID[5];
 char pos;
 char data_count = 0;
@@ -80,14 +66,14 @@ void NRF_CheckTx(bool RxNeed);
 // External Interrupt 0 service routine
 interrupt [EXT_INT0] void ext_int0_isr(void)
 {    
-    char length,a,stat; 
-    puts("<i");
-    if(!NRF_IRQ_State) {    
-        
-        puts(" d>");
+    char length,a,stat;      
+    if(!NRF_IRQ_State) {         
+        dbg_puts(" <i ret> ");
         return;    
-    }
-    stat=read_irq();      
+    } 
+    
+    stat=read_irq();  
+    dbg_printf(" <i %x ", stat);    
     if(stat & 0x40){ 
         read_rx(out,&length); 
         for(a=0;a<length;a++)putchar(out[a]);   
@@ -108,17 +94,18 @@ interrupt [EXT_INT0] void ext_int0_isr(void)
          }  */
         if(HackModeState) putchar('>');
     }
-    else if(stat & 0x20){ puts(" + "); Tx_Completed = true; }
-    else if(stat & 0x10){ puts(" - "); Tx_Failed = true; } 
+    else if(stat & 0x20){ dbg_puts(" + "); Tx_Completed = true; }
+    else if(stat & 0x10){ dbg_puts(" - "); Tx_Failed = true; }
+     
     clr_irq();                                
     Tx_Run = false; 
-    puts(" e>");
+    dbg_printf(" ret> ");   
 }
 
 void NRF_CheckTx(bool RxNeed){
 
     if(!(Tx_Completed || Tx_Failed)) return;
-    if(Tx_Failed) puts(tx_error);
+    if(Tx_Failed) putsf(tx_error);
     Tx_Completed = false; 
     Tx_Failed = false;
     if(RxNeed) rx_mode();
@@ -170,7 +157,7 @@ interrupt [USART_RXC] void usart_rx_isr(void)
         }
     #endif
    }  
-   else puts(uart_error);
+   else putsf(uart_error);
 }
 
 #ifndef _DEBUG_TERMINAL_IO_
@@ -315,20 +302,13 @@ TWCR=(0<<TWEA) | (0<<TWSTA) | (0<<TWSTO) | (0<<TWEN) | (0<<TWIE);
 delay_ms(1000);
 
 NRF24L01_init();
-rx_mode();
-delay_ms(50); 
-csn=0;            //
-spi(0xE2);        //
-csn=1;            //
-csn=0;            //
-spi(0xE1);        //
-csn=1; 
+rx_mode();  
 clr_irq();   
 
 #ifdef TestBoardRemap
-printf("NRF24L01+ demo board adapter\r\nBaudrate: 115200\r\n");
+printf("\r\nNRF24L01+ demo board adapter\r\nBaudrate: %p\r\n", UART_BAUD_RATE_STR);
 #else
-printf("NRF24L01+ adapter\r\nBaudrate: 115200\r\n");
+printf("\r\nNRF24L01+ adapter\r\nBaudrate: %p\r\n", UART_BAUD_RATE_STR);
 #endif
 #asm("sei")
     while (1){      
@@ -358,7 +338,7 @@ printf("NRF24L01+ adapter\r\nBaudrate: 115200\r\n");
                         CRC = CRC16(data,length-2);
                         if((data[length-2] != (char)CRC) || (data[length-1] != (char)(CRC>>8))){
                             ReturnToReadUart=true;
-                            puts(crc_error_message);  
+                            putsf(crc_error_message);  
                         }
                         #endif
                     if(RR_WaitData){ IProcc(5, data);  ReturnToReadUart = true;}
@@ -416,13 +396,11 @@ printf("NRF24L01+ adapter\r\nBaudrate: 115200\r\n");
                 continue;  
             }
         }   
-          
-          // delay_ms(1); 
-        putchar('>');
-        while(Tx_Run) NRF_CheckTx(false);
-        printf("TX[%u]",length);
+    
+        dbg_puts("\r\n{");
+        while(Tx_Run) NRF_CheckTx(false); 
+        dbg_printf("TX[%u]",length);
         send_data(data,length); 
-        putchar('<');
-               
+        dbg_putc('}');              
       }      
 }

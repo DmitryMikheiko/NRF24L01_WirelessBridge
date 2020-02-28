@@ -21,12 +21,12 @@ Active0=0
 EditorPanel0=0
 PageIndex0=0
 EditorPanel1=0
-TimeStamp1=1348176049
+TimeStamp1=1348226429
 PageIndex1=1
 OF2=nrf24l01.c
 Active2=0
 EditorPanel2=0
-TimeStamp2=1348176260
+TimeStamp2=1348226429
 PageIndex2=3
 TimeStamp0=1197180405
 OF3=CRC.c
@@ -42,12 +42,12 @@ PageIndex4=4
 OF5=Instructions.h
 Active5=0
 EditorPanel5=0
-TimeStamp5=1348174797
+TimeStamp5=1348226070
 PageIndex5=5
 OF6=Config.h
 Active6=0
 EditorPanel6=0
-TimeStamp6=1348174631
+TimeStamp6=1348226037
 PageIndex6=6
 ActiveBuildConfiguration=1
 DebugOutputListFilesDirectory=Debug\List
@@ -146,7 +146,7 @@ WarningUnknownPragma=1
 LinkerWarnings=1
 DebugBootLoader=0
 WatchAVR8LAutoVariables=0
-Build=226
+Build=274
 UseEEPROMLocation0=1
 ExternalInterruptVectors=0
 IncludePath0=
@@ -213,7 +213,7 @@ LibraryPath28=
 LibraryPath29=
 LibraryPath30=
 LibraryPath31=
-COFFileTimeStamp=1348176260
+COFFileTimeStamp=1348231580
 OutputFormat=1
 EnhancedFunctionParameterPassing=1
 WarningCantInlineFunction=1
@@ -376,9 +376,9 @@ Row=0
 Column=0
 ScrollPosX=0
 ScrollPosY=0
-TimeStamp=1348176397
+TimeStamp=1348226560
 [BookmarksFoldedCode]
-Files=13
+Files=14
 F1=Wireless Bridge.c
 F2=nrf24l01.c
 F3=E:\прога\Проекты\WT\Wboot\Wboot.c
@@ -392,12 +392,13 @@ F10=WB_Protocol.c
 F11=CRC.c
 F12=List\Wireless Bridge.asm
 F13=E:\Projects\Hard\NRF24L01_WirelessBridge\Config.h
+F14=Config.h
 [Bookmarks1]
-TimeStamp=1348176049
-Row=333
-Column=42
+TimeStamp=1348226429
+Row=425
+Column=35
 ScrollPosX=0
-ScrollPosY=321
+ScrollPosY=404
 BK0=-1
 BK1=-1
 BK2=-1
@@ -409,11 +410,11 @@ BK7=-1
 BK8=-1
 BK9=-1
 [Bookmarks2]
-TimeStamp=1348176260
-Row=141
-Column=93
+TimeStamp=1348226429
+Row=182
+Column=14
 ScrollPosX=0
-ScrollPosY=120
+ScrollPosY=152
 BK0=-1
 BK1=-1
 BK2=-1
@@ -533,9 +534,9 @@ BK9=-1
 [FoldedCode8]
 Blocks=0
 [Bookmarks9]
-TimeStamp=1348174797
-Row=13
-Column=52
+TimeStamp=1348226070
+Row=14
+Column=0
 ScrollPosX=0
 ScrollPosY=0
 BK0=-1
@@ -597,7 +598,7 @@ BK7=-1
 BK8=-1
 BK9=-1
 [CompilerDebug]
-Build=226
+Build=274
 Chip=ATmega8
 CPUClock=16000000
 MemoryModel=1
@@ -713,10 +714,10 @@ L13=Enhanced function parameters passing: Yes
 L14=Automatic register allocation: Yes
 L15=Smart register allocation: Yes
 L16=
-L17=Build: 225
-L18=11218 line(s) compiled
+L17=Build: 274
+L18=11328 line(s) compiled
 L19=No errors
-L20=1 warning(s)
+L20=No warnings
 L21=
 L22=Bit variables area: 0x2 to 0x2
 L23=Bit variables size: 1 byte(s)
@@ -725,28 +726,28 @@ L25=Data Stack area: 0x60 to 0xDF
 L26=Data Stack size: 128 byte(s)
 L27=Estimated Data Stack usage: 61 byte(s)
 L28=
-L29=RAM Global variables area: 0xE0 to 0x44B
-L30=RAM Global variables size: 876 byte(s)
+L29=RAM Global variables area: 0xE0 to 0x3B5
+L30=RAM Global variables size: 726 byte(s)
 L31=
-L32=Hardware Stack area: 0x44C to 0x45F
-L33=Hardware Stack size: 20 byte(s)
+L32=Hardware Stack area: 0x3B6 to 0x45F
+L33=Hardware Stack size: 170 byte(s)
 L34=
 L35=Heap size: 0 byte(s)
 L36=
 L37=EEPROM usage: 0 byte(s), 0,0% of EEPROM
-L38=Program size: 2793 words (5586 bytes), 68,2% of FLASH
+L38=Program size: 2696 words (5392 bytes), 65,8% of FLASH
 Lines=38
 [BuildInfoAssembler]
 L1=AVRASM: AVR macro assembler 2.1.30 (build 592 Nov  7 2008 12:38:17)
 L2=Copyright (C) 1995-2008 ATMEL Corporation
 L3=
-L4=E:\Projects\Hard\NRF24L01_WirelessBridge\List\Wireless Bridge.asm(4946): No EEPROM data, deleting E:\Projects\Hard\NRF24L01_WirelessBridge\Exe\Wireless Bridge.eep
+L4=E:\Projects\Hard\NRF24L01_WirelessBridge\List\Wireless Bridge.asm(4826): No EEPROM data, deleting E:\Projects\Hard\NRF24L01_WirelessBridge\Exe\Wireless Bridge.eep
 L5=
 L6=ATmega8 memory use summary [bytes]:
 L7=Segment   Begin    End      Code   Data   Used    Size   Use%
 L8=---------------------------------------------------------------
-L9=[.cseg] 0x000000 0x0015d2   4622    964   5586    8192  68.2%
-L10=[.dseg] 0x000060 0x00044c      0    876    876    1024  85.5%
+L9=[.cseg] 0x000000 0x001510   4562    830   5392    8192  65.8%
+L10=[.dseg] 0x000060 0x0003b6      0    726    726    1024  70.9%
 L11=[.eseg] 0x000000 0x000000      0      0      0     512   0.0%
 L12=
 Lines=12
@@ -762,6 +763,52 @@ HIDKeyboard=0
 HIDMouse=0
 HIDJoystick=0
 [FoldedCode12]
+Blocks=0
+[Bookmarks13]
+TimeStamp=1348174631
+Row=6
+Column=30
+ScrollPosX=0
+ScrollPosY=0
+BK0=-1
+BK1=-1
+BK2=-1
+BK3=-1
+BK4=-1
+BK5=-1
+BK6=-1
+BK7=-1
+BK8=-1
+BK9=-1
+[FoldedCode13]
+Blocks=0
+[FoldedCode1]
+Blocks=0
+[Bookmarks14]
+TimeStamp=1348226037
+Row=6
+Column=30
+ScrollPosX=0
+ScrollPosY=0
+BK0=-1
+BK1=-1
+BK2=-1
+BK3=-1
+BK4=-1
+BK5=-1
+BK6=-1
+BK7=-1
+BK8=-1
+BK9=-1
+[FoldedCode14]
+Blocks=0
+[FoldedCode9]
+Blocks=0
+[FoldedCode10]
+Blocks=0
+[FoldedCode11]
+Blocks=0
+[FoldedCode2]
 Blocks=0
 [HeadersList]
 Files=1
@@ -782,32 +829,3 @@ F11=C:\cvavr\inc\string.h
 F12=CRC.C
 F13=WB_Protocol.c
 F14=Instructions.h
-[FoldedCode1]
-Line1=338
-Blocks=1
-[Bookmarks13]
-TimeStamp=1348174631
-Row=6
-Column=30
-ScrollPosX=0
-ScrollPosY=0
-BK0=-1
-BK1=-1
-BK2=-1
-BK3=-1
-BK4=-1
-BK5=-1
-BK6=-1
-BK7=-1
-BK8=-1
-BK9=-1
-[FoldedCode13]
-Blocks=0
-[FoldedCode9]
-Blocks=0
-[FoldedCode10]
-Blocks=0
-[FoldedCode11]
-Blocks=0
-[FoldedCode2]
-Blocks=0
